@@ -1,0 +1,28 @@
+{
+  "name": "nodejs",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node index.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@types/node": "^18.0.6",
+    "@vitalets/google-translate-api": "^9.2.0",
+    "canvas": "^2.11.2",
+    "chalk": "^4.1.2",
+    "express": "^4.21.2",
+    "firebase": "^11.1.0",
+    "fs-extra": "^11.2.0",
+    "gradient-string": "^3.0.0",
+    "node-fetch": "^3.3.2",
+    "pastebin-js": "^1.0.6",
+    "ryuu-fca-api": "^3.2.2",
+    "speedtest-net": "^2.2.0",
+    "translate-google": "^1.5.0"
+  },
+  "description": ""
+}

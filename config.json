@@ -1,0 +1,18 @@
+{
+    "prefix": "/",
+    "adminBot": [
+        "61568587336275",
+        "100088085177610",
+        "100072207731954"
+    ],
+    "botName": "Zer manto",
+    "unloadedCommands": [],
+    "copyright": "© 2025 Edinst & Hady",
+    "dataSource": "couchbase",
+    "couchbase": {
+        "connectionString": "couchbases://cb.osnpeuquo4lze7qz.cloud.couchbase.com",
+        "username": "Edi2nih",
+        "password": "Edinst0877#",
+        "bucketName": "travel-sample"
+    }
+}
