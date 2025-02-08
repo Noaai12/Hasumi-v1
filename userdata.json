@@ -2,9 +2,9 @@
   "61568587336275": {
     "name": "Edi Nst",
     "balance": "99999999940.81",
-    "exp": "141.9",
+    "exp": "142.4",
     "level": "user",
-    "totalMessages": 1009,
+    "totalMessages": 1014,
     "id": 1
   },
   "100088085177610": {
@@ -154,9 +154,9 @@
   "100082154359331": {
     "name": "I M Range",
     "balance": "5.52",
-    "exp": "5.3",
+    "exp": "5.4",
     "level": "newbie",
-    "totalMessages": 53,
+    "totalMessages": 54,
     "id": 20
   },
   "100084974348090": {
@@ -226,9 +226,9 @@
   "100077377805039": {
     "name": "IAN FOX",
     "balance": "6.78",
-    "exp": "3.2",
+    "exp": "3.5",
     "level": "newbie",
-    "totalMessages": 32,
+    "totalMessages": 35,
     "id": 29
   },
   "100086775040988": {
@@ -298,9 +298,9 @@
   "61572528316386": {
     "name": "Ganiela Pipiw",
     "balance": "5.00",
-    "exp": "0.6",
+    "exp": "0.7",
     "level": "newbie",
-    "totalMessages": 6,
+    "totalMessages": 7,
     "id": 38
   }
 }

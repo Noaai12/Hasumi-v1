@@ -5,17 +5,19 @@ module.exports = {
     usage: "/restart",
     author: "Edinst",
     cooldown: 5,
-    role: 2, // Only BOT_ADMIN can use this command
+    role: 2,
     execute: async function(api, event, args) {
         try {
-            await api.sendMessage("🔄 Bot akan direstart dalam 3 detik...", event.threadID);
-            // Add delay to ensure message is sent
+            await api.sendMessage("🔄 Bot akan direstart dalam 3 detik\nsetelah restart garap aktif kan manual", event.threadID);
+            
+            // Give time for message to be sent and cleanup
             setTimeout(() => {
-                process.exit(1);  // Exit code 1 triggers restart in start.bat
+                // Exit with code 1 to trigger the restart handler in index.js
+                process.exit(1);
             }, 3000);
         } catch (error) {
             console.error("Error in restart command:", error);
-            api.sendMessage("❌ Gagal merestart bot", event.threadID);
+            api.sendMessage("❌ Gagal merestart bot: " + error.message, event.threadID);
         }
     }
 };

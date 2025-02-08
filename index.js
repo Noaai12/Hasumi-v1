@@ -476,9 +476,31 @@ async function initializeBot() {
     }
 }
 
+// Add this before initializeBot() call:
+process.on('exit', (code) => {
+    if (code === 1) {
+        Logger.info('Restarting bot...');
+        require('child_process').spawn(process.argv.shift(), process.argv, {
+            cwd: process.cwd(),
+            detached: true,
+            stdio: 'inherit'
+        });
+    }
+});
+
+process.on('uncaughtException', (err) => {
+    Logger.error('Uncaught Exception:', err);
+    process.exit(1); // This will trigger restart
+});
+
+process.on('unhandledRejection', (err) => {
+    Logger.error('Unhandled Rejection:', err);
+    process.exit(1); // This will trigger restart
+});
+
 initializeBot().catch(err => {
-    console.error("Error dalam inisialisasi bot:", err);
-    process.exit(1);
+    Logger.error("Error dalam inisialisasi bot:", err);
+    process.exit(1); // Changed from direct exit to exit with code 1
 });
 
 // Tampilkan logo saat startup
