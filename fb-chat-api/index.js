@@ -362,128 +362,54 @@ function buildAPI(globalOptions, html, jar) {
 }
 
 // unfortunately login via credentials no longer works,so instead of login via credentials, use login via appstate intead.
-function loginHelper(appState, email, password, globalOptions, callback, prCallback ) {
-    let mainPromise = null;
+function loginHelper(appState, email, password, globalOptions, callback, prCallback) {
     const jar = utils.getJar();
 
-    // If we're given an appState we loop through it and save each cookie
-    // back into the jar.
-    if (appState) {
-		// check and convert cookie to appState
-		if (utils.getType(appState) === 'Array' && appState.some(c => c.name)) {
-			appState = appState.map(c => {
-				c.key = c.name;
-				delete c.name;
-				return c;
-			})
-		}
-		else if (utils.getType(appState) === 'String') {
-			const arrayAppState = [];
-			appState.split(';').forEach(c => {
-				const [key, value] = c.split('=');
-
-				arrayAppState.push({
-					key: (key || "").trim(),
-					value: (value || "").trim(),
-					domain: ".facebook.com",
-					path: "/",
-					expires: new Date().getTime() + 1000 * 60 * 60 * 24 * 365
-				});
-			});
-			appState = arrayAppState;
-		}
-
-		appState.map(function (c) {
-			const str = c.key + "=" + c.value + "; expires=" + c.expires + "; domain=" + c.domain + "; path=" + c.path + ";";
-			jar.setCookie(str, "http://" + c.domain);
-		});
-        
-        // Load the main page.
-        mainPromise = utils
-			.get('https://www.facebook.com/', jar, null, globalOptions, { noRef: true })
-			.then(utils.saveCookies(jar));
-	} else {
-		if (email) {
-			throw { error: "Unfortunately login via credentials is no longer work, please use login via appstate instead." };
-		}
-		else {
-			throw { error: "Please provide appstate." };
-		}
-	}
-    
-    function CheckAndFixErr(res, fastSwitch) {
-        if (fastSwitch) return res;
-            let reg_antierr = /7431627028261359627/gs; // :>
-            if (reg_antierr.test(res.body)) {
-                const Data = JSON.stringify(res.body);
-                const Dt_Check = Data.split('2Fhome.php&amp;gfid=')[1];
-                if (Dt_Check == undefined) return res
-                const fid = Dt_Check.split("\\\\")[0];//fix
-                if (Dt_Check == undefined || Dt_Check == "") return res
-                const final_fid = fid.split(`\\`)[0];
-                if (final_fid == undefined || final_fid == '') return res;
-                const redirectlink = redirect[1] + "a/preferences.php?basic_site_devices=m_basic&uri=" + encodeURIComponent("https://m.facebook.com/home.php") + "&gfid=" + final_fid;
-                bypass_region_err = true;
-                return utils.get(redirectlink, jar, null, globalOptions).then(utils.saveCookies(jar));
-            }
-            else return res
-        }
-
-	    function Redirect(res,fastSwitch) {
-    if (fastSwitch) return res;
-        var reg = /<meta http-equiv="refresh" content="0;url=([^"]+)[^>]+>/;
-        redirect = reg.exec(res.body);
-            if (redirect && redirect[1]) return utils.get(redirect[1], jar, null, globalOptions)
-        return res;
+    // Better appstate validation and handling
+    if (!appState || !Array.isArray(appState)) {
+        callback({ error: "Appstate must be a valid array" });
+        return;
     }
 
-    let redirect = [1, "https://m.facebook.com/"];
-    let bypass_region_err = false;
-        var ctx,api;
-            mainPromise = mainPromise
-                .then(res => Redirect(res))
-                .then(res => CheckAndFixErr(res))
-                //fix via login with defaut UA return WWW.facebook.com not m.facebook.com
-                .then(function(res) {
-                    if (global.OnAutoLoginProcess) return res;
-                    else {
-                        let Regex_Via = /MPageLoadClientMetrics/gs; //default for normal account, can easily get region, without this u can't get region in some case but u can run normal
-                        if (!Regex_Via.test(res.body)) {
-                            return utils.get('https://www.facebook.com/', jar, null, globalOptions, { noRef: true })
-                        }
-                        else return res
-                    }
-                })
-                .then(res => BypassAutomationNotification(res, jar, globalOptions, appState))
-                .then(res => Redirect(res, global.OnAutoLoginProcess))
-                .then(res => CheckAndFixErr(res, global.OnAutoLoginProcess))
-                .then(function(res){
-                    const html = res.body,Obj = buildAPI(globalOptions, html, jar,bypass_region_err);
-                        ctx = Obj.ctx;
-                        api = Obj.api;
-                    return res;
-                });
-            if (globalOptions.pageID) {
-                mainPromise = mainPromise
-                    .then(function() {
-                        return utils.get('https://www.facebook.com/' + ctx.globalOptions.pageID + '/messages/?section=messages&subsection=inbox', ctx.jar, null, globalOptions);
-                    })
-                    .then(function(resData) {
-                        const url = utils.getFrom(resData.body, 'window.location.replace("https:\\/\\/www.facebook.com\\', '");').split('\\').join('');
-                        url = url.substring(0, url.length - 1);
-                        return utils.get('https://www.facebook.com' + url, ctx.jar, null, globalOptions);
-                    });
-            }
-	// At the end we call the callback or catch an exception
-	mainPromise
-		.then(function () {
-			log.info("login", 'Done logging in.');
-			return callback(null, api);
-		})
-		.catch(function (e) {
-			log.error("login", e.error || e);
-			callback(e);
-		});
+    try {
+        // Convert and validate cookies
+        appState.forEach(cookie => {
+            // Skip invalid cookies
+            if (!cookie.key && !cookie.name) return;
+
+            const cookieStr = (cookie.key || cookie.name) + "=" + cookie.value + 
+                "; expires=" + (cookie.expires || new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toUTCString()) +
+                "; domain=" + (cookie.domain || ".facebook.com") + 
+                "; path=" + (cookie.path || "/");
+
+            jar.setCookie(cookieStr, "http://" + (cookie.domain || "facebook.com"));
+        });
+
+        // Initial page load
+        return utils.get('https://www.facebook.com/', jar, null, globalOptions, { noRef: true })
+            .then(utils.saveCookies(jar))
+            .then(res => {
+                // Check if we got a valid response
+                if (!res.body) {
+                    throw { error: "Invalid response from facebook" };
+                }
+
+                // Build API
+                const html = res.body;
+                const buildResult = buildAPI(globalOptions, html, jar);
+                
+                // Return API through callback
+                callback(null, buildResult.api);
+            })
+            .catch(err => {
+                log.error("login", err);
+                callback(err);
+            });
+
+    } catch (e) {
+        log.error("login", e);
+        callback({ error: "Failed to parse appstate: " + e.message });
+    }
 }
 
 function login(loginData, options, callback) {
@@ -507,7 +433,7 @@ function login(loginData, options, callback) {
         userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 14.7; rv:132.0) Gecko/20100101 Firefox/132.0"
     };
 
-    setOptions(globalOptions, options);  
+    setOptions(globalOptions, options);
 
     let prCallback = null;
     if (utils.getType(callback) !== "Function" && utils.getType(callback) !== "AsyncFunction") {
@@ -522,6 +448,12 @@ function login(loginData, options, callback) {
             return resolveFunc(api);
         };
         callback = prCallback;
+    }
+
+    // Validate loginData
+    if (!loginData || !loginData.appState) {
+        callback({ error: "Please provide appstate in loginData" });
+        return returnPromise;
     }
 
     loginHelper(loginData.appState, loginData.email, loginData.password, globalOptions, callback, prCallback);

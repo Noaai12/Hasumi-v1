@@ -1,3 +1,6 @@
+const { spawn } = require('child_process');
+const Logger = require('../utils/log.js');
+
 module.exports = {
     name: "restart",
     aliases: ["reboot", "reload"],
@@ -8,15 +11,29 @@ module.exports = {
     role: 2,
     execute: async function(api, event, args) {
         try {
-            await api.sendMessage("🔄 Bot akan direstart dalam 3 detik\nsetelah restart garap aktif kan manual", event.threadID);
+            await api.sendMessage("🔄 Bot akan direstart dalam 3 detik...", event.threadID);
             
-            // Give time for message to be sent and cleanup
-            setTimeout(() => {
-                // Exit with code 1 to trigger the restart handler in index.js
-                process.exit(1);
+            setTimeout(async () => {
+                try {
+                    // Spawn new process
+                    const child = spawn('npm', ['start'], {
+                        cwd: process.cwd(),
+                        detached: true,
+                        stdio: 'inherit',
+                        shell: true
+                    });
+                    
+                    child.unref();
+                    
+                    // Exit current process
+                    process.exit(0);
+                } catch (spawnError) {
+                    Logger.error('Restart error:', spawnError);
+                    api.sendMessage("❌ Gagal merestart bot", event.threadID);
+                }
             }, 3000);
         } catch (error) {
-            console.error("Error in restart command:", error);
+            Logger.error("Error in restart command:", error);
             api.sendMessage("❌ Gagal merestart bot: " + error.message, event.threadID);
         }
     }

@@ -1,6 +1,7 @@
 const simpleGit = require('simple-git');
 const git = simpleGit();
 const Logger = require('../utils/log.js');
+const { spawn } = require('child_process');
 
 module.exports = {
     name: "update",
@@ -66,8 +67,23 @@ module.exports = {
                     
                     Logger.info('Update successful, restarting bot...');
                     
-                    setTimeout(() => {
-                        process.exit(1);
+                    await api.sendMessage("🔄 Merestart bot untuk menerapkan pembaruan...", event.threadID);
+            
+                    setTimeout(async () => {
+                        try {
+                            const child = spawn('npm', ['start'], {
+                                cwd: process.cwd(),
+                                detached: true,
+                                stdio: 'inherit',
+                                shell: true
+                            });
+                            
+                            child.unref();
+                            process.exit(0);
+                        } catch (spawnError) {
+                            Logger.error('Update restart error:', spawnError);
+                            api.sendMessage("❌ Gagal merestart bot setelah update", event.threadID);
+                        }
                     }, 3000);
                 }
             };
@@ -80,7 +96,7 @@ module.exports = {
             });
 
         } catch (error) {
-            console.error("Error in update command:", error);
+            Logger.error("Error in update command:", error);
             api.sendMessage("❌ Gagal mengupdate bot: " + error.message, event.threadID);
         }
     }

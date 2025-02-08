@@ -1,7 +1,7 @@
 // Import dependencies
 const { startWeb } = require('./app.js');
-const fs = require("fs").promises;
-const login = require("ryuu-fca-api");
+const fs = require('fs');
+const login = require('./fb-chat-api');
 const Logger = require('./utils/log.js');
 
 // Jalankan web server
@@ -49,15 +49,13 @@ global.getUserRole = async function(api, event, config) {
 
 async function loadUserData() {
     try {
-        const config = await readConfig();
-        const exists = await fs.access(USER_DATA_FILE).then(() => true).catch(() => false);
-        if (!exists) {
+        if (!fs.existsSync(USER_DATA_FILE)) {
             global.userData = {};
             await saveUserData();
             return;
         }
 
-        const data = await fs.readFile(USER_DATA_FILE, 'utf8');
+        const data = fs.readFileSync(USER_DATA_FILE, 'utf8');
         try {
             global.userData = JSON.parse(data);
             let fakeIdCounter = 1;
@@ -70,12 +68,12 @@ async function loadUserData() {
                 }
             });
         } catch (parseError) {
-            console.error("Error parsing userdata.json, creating new file:", parseError);
+            Logger.error("Error parsing userdata.json, creating new file:", parseError);
             global.userData = {};
         }
         await saveUserData();
     } catch (err) {
-        console.error("Error in loadUserData:", err);
+        Logger.error("Error in loadUserData:", err);
         global.userData = {};
         await saveUserData();
     }
@@ -96,10 +94,9 @@ async function saveUserData() {
                 };
             }
         });
-        const jsonString = JSON.stringify(formattedData, null, 2);
-        await fs.writeFile(USER_DATA_FILE, jsonString, 'utf8');
+        fs.writeFileSync(USER_DATA_FILE, JSON.stringify(formattedData, null, 2), 'utf8');
     } catch (error) {
-        console.error("Error saving user data:", error);
+        Logger.error("Error saving user data:", error);
     }
 }
 
@@ -160,7 +157,7 @@ function updateUserData(userID) {
 
 async function loadGroupData() {
     try {
-        const data = await fs.readFile(GROUP_DATA_FILE, 'utf8');
+        const data = fs.readFileSync(GROUP_DATA_FILE, 'utf8');
         groupData = JSON.parse(data);
     } catch (err) {
         groupData = {};
@@ -170,7 +167,7 @@ async function loadGroupData() {
 
 async function saveGroupData() {
     try {
-        await fs.writeFile(GROUP_DATA_FILE, JSON.stringify(groupData, null, 2));
+        fs.writeFileSync(GROUP_DATA_FILE, JSON.stringify(groupData, null, 2));
     } catch (error) {
         console.error("Error saving group data:", error);
     }
@@ -204,10 +201,10 @@ async function updateGroupData(threadID) {
 
 async function readConfig() {
     try {
-        const configData = await fs.readFile('config.json', 'utf8');
+        const configData = fs.readFileSync('config.json', 'utf8');
         return JSON.parse(configData);
     } catch (err) {
-        console.error("Terjadi kesalahan saat membaca config.json:", err);
+        Logger.error("Terjadi kesalahan saat membaca config.json:", err);
         process.exit(1);
     }
 }
@@ -245,7 +242,7 @@ global.loadCommands = async function() {
         });
 
         const config = await readConfig();
-        const files = await fs.readdir('./cmd');
+        const files = fs.readdirSync('./cmd');
         for (const file of files) {
             if (file.endsWith('.js')) {
                 try {
@@ -345,164 +342,157 @@ async function handleReply(api, event) {
     }
 }
 
+// Modify error handlers to be minimal
+process.on('uncaughtException', (err) => {
+    Logger.error('Uncaught Exception:', err);
+});
+
+process.on('unhandledRejection', (reason) => {
+    Logger.error('Unhandled Rejection:', reason);
+});
+
+// Fix initialize bot to handle single login
 async function initializeBot() {
     try {
         await loadUserData();
         await loadGroupData();
-
         const config = await readConfig();
         const prefix = config.prefix;
-
         await global.loadCommands();
 
+        // Auto reload commands
         setInterval(async () => {
             try {
                 await global.loadCommands();
             } catch (reloadError) {
-                console.error('❌ Error during auto-reload:', reloadError);
+                Logger.error('❌ Error during auto-reload:', reloadError);
             }
         }, 3000);
 
         commands['prefix'] = {
             name: 'prefix',
-            execute: function(api, event, args) {
+            execute: function(api, event) {
                 api.sendMessage(`Prefix:\n${prefix}`, event.threadID);
             }
         };
 
         const prefixKeywords = ['prefix', 'Prefix'];
-        const appState = await fs.readFile('appstate.json', 'utf8');
-
-        login({appState: JSON.parse(appState)}, (err, api) => {
-            if(err) {
-                console.error("Error saat login:", err);
-                return;
-            }
-
-            globalApi = api;
-            setFacebookOptions(api);
-            simulateHumanBehavior(api); // Call the new method here
-
-            api.setOptions({listenEvents: true});
-
-            var stopListening = api.listenMqtt(async (err, event) => {
+        
+        try {
+            const appState = JSON.parse(fs.readFileSync('appstate.json', 'utf8'));
+            login({appState}, (err, api) => {
                 if(err) {
-                    console.error("Error saat mendengarkan pesan:", err);
+                    Logger.error("Error saat login:", err);
                     return;
                 }
 
-                api.markAsRead(event.threadID, (err) => { 
-                    if(err) console.error("Gagal menandai pesan sebagai terbaca:", err); 
-                });
+                globalApi = api;
+                setFacebookOptions(api);
+                simulateHumanBehavior(api);
 
-                switch(event.type) {
-                    case "message":
-                        try {
-                            await updateUserData(event.senderID);
-                            await updateGroupData(event.threadID);
+                api.setOptions({listenEvents: true});
+                
+                api.listenMqtt(async (err, event) => {
+                    if(err) {
+                        console.error("Error saat mendengarkan pesan:", err);
+                        return;
+                    }
 
-                            const lowercaseMessage = event.body.toLowerCase();
-                            if (prefixKeywords.some(keyword => lowercaseMessage.includes(keyword))) {
-                                api.sendMessage(`Prefix:\n${prefix}`, event.threadID);
-                            }
+                    api.markAsRead(event.threadID, (err) => { 
+                        if(err) console.error("Gagal menandai pesan sebagai terbaca:", err); 
+                    });
 
-                            if(event.body.startsWith(prefix)) {
-                                const commandBody = event.body.slice(prefix.length).trim();
-                                const args = commandBody.split(/ +/);
-                                const commandName = args.shift().toLowerCase();
-                                const command = commands[commandName];
+                    switch(event.type) {
+                        case "message":
+                            try {
+                                await updateUserData(event.senderID);
+                                await updateGroupData(event.threadID);
 
-                                if (command) {
-                                    const cooldownTime = checkCooldown(event.senderID, command);
-                                    if (cooldownTime) {
-                                        api.sendMessage(
-                                            `Mohon tunggu ${cooldownTime} detik sebelum menggunakan command ${command.name} lagi.`,
-                                            event.threadID
-                                        );
-                                        return;
-                                    }
+                                const lowercaseMessage = event.body.toLowerCase();
+                                if (prefixKeywords.some(keyword => lowercaseMessage.includes(keyword))) {
+                                    api.sendMessage(`Prefix:\n${prefix}`, event.threadID);
+                                }
 
-                                    const userRole = await getUserRole(api, event, config);
-                                    if (userRole < command.role) {
-                                        const roleNames = {
-                                            0: "User",
-                                            1: "Admin Grup",
-                                            2: "Admin Bot"
-                                        };
-                                        return api.sendMessage(
-                                            `❌ Anda tidak memiliki izin untuk menggunakan command ini.\nMinimal role: ${roleNames[command.role]}`, 
-                                            event.threadID
-                                        );
-                                    }
+                                if(event.body.startsWith(prefix)) {
+                                    const commandBody = event.body.slice(prefix.length).trim();
+                                    const args = commandBody.split(/ +/);
+                                    const commandName = args.shift().toLowerCase();
+                                    const command = commands[commandName];
 
-                                    // Cek balance user sebelum menjalankan command berbayar
-                                    if (command.price > 0) {
-                                        const userBalance = Number(global.userData[event.senderID]?.balance || 0);
-                                        if (userBalance < command.price) {
+                                    if (command) {
+                                        const cooldownTime = checkCooldown(event.senderID, command);
+                                        if (cooldownTime) {
+                                            api.sendMessage(
+                                                `Mohon tunggu ${cooldownTime} detik sebelum menggunakan command ${command.name} lagi.`,
+                                                event.threadID
+                                            );
+                                            return;
+                                        }
+
+                                        const userRole = await getUserRole(api, event, config);
+                                        if (userRole < command.role) {
+                                            const roleNames = {
+                                                0: "User",
+                                                1: "Admin Grup",
+                                                2: "Admin Bot"
+                                            };
                                             return api.sendMessage(
-                                                `❌ Balance Anda tidak cukup untuk menggunakan command ini.\nHarga: ${command.price}\nBalance Anda: ${userBalance}`, 
+                                                `❌ Anda tidak memiliki izin untuk menggunakan command ini.\nMinimal role: ${roleNames[command.role]}`, 
                                                 event.threadID
                                             );
                                         }
-                                        
-                                        // Kurangi balance user
-                                        global.userData[event.senderID].balance = (userBalance - command.price).toFixed(2);
-                                        await saveUserData();
+
+                                        // Cek balance user sebelum menjalankan command berbayar
+                                        if (command.price > 0) {
+                                            const userBalance = Number(global.userData[event.senderID]?.balance || 0);
+                                            if (userBalance < command.price) {
+                                                return api.sendMessage(
+                                                    `❌ Balance Anda tidak cukup untuk menggunakan command ini.\nHarga: ${command.price}\nBalance Anda: ${userBalance}`, 
+                                                    event.threadID
+                                                );
+                                            }
+                                            
+                                            // Kurangi balance user
+                                            global.userData[event.senderID].balance = (userBalance - command.price).toFixed(2);
+                                            await saveUserData();
+                                        }
+
+                                        await command.execute(api, event, args);
+                                    } else {
+                                        api.sendMessage("Perintah tidak ditemukan!", event.threadID);
                                     }
-
-                                    await command.execute(api, event, args);
-                                } else {
-                                    api.sendMessage("Perintah tidak ditemukan!", event.threadID);
                                 }
+
+                                // Handle message replies
+                                await handleReply(api, event);
+
+                            } catch (error) {
+                                console.error("Error in message handler:", error);
                             }
+                            break;
 
-                            // Handle message replies
-                            await handleReply(api, event);
-
-                        } catch (error) {
-                            console.error("Error in message handler:", error);
-                        }
-                        break;
-
-                    case "event":
-                        await updateGroupData(event.threadID);
-                        console.log(event);
-                        break;
-                }
+                        case "event":
+                            await updateGroupData(event.threadID);
+                            console.log(event);
+                            break;
+                    }
+                });
             });
-        });
+        } catch (err) {
+            Logger.error("Error membaca appstate:", err);
+            throw err;
+        }
     } catch (mainError) {
-        console.error("Terjadi kesalahan utama:", mainError);
+        Logger.error("Terjadi kesalahan utama:", mainError);
+        throw mainError;
     }
 }
 
-// Add this before initializeBot() call:
-process.on('exit', (code) => {
-    if (code === 1) {
-        Logger.info('Restarting bot...');
-        require('child_process').spawn(process.argv.shift(), process.argv, {
-            cwd: process.cwd(),
-            detached: true,
-            stdio: 'inherit'
-        });
-    }
-});
-
-process.on('uncaughtException', (err) => {
-    Logger.error('Uncaught Exception:', err);
-    process.exit(1); // This will trigger restart
-});
-
-process.on('unhandledRejection', (err) => {
-    Logger.error('Unhandled Rejection:', err);
-    process.exit(1); // This will trigger restart
-});
-
+// Start the bot
 initializeBot().catch(err => {
     Logger.error("Error dalam inisialisasi bot:", err);
-    process.exit(1); // Changed from direct exit to exit with code 1
 });
 
-// Tampilkan logo saat startup
+// Show startup logo
 Logger.showLogo();
 Logger.info('Starting bot...');
