@@ -1,18 +1,18 @@
 {
   "61568587336275": {
     "name": "Edi Nst",
-    "balance": "99999999940.81",
-    "exp": "142.7",
+    "balance": "99999999947.81",
+    "exp": "149.6",
     "level": "user",
-    "totalMessages": 1017,
+    "totalMessages": 1086,
     "id": 1
   },
   "100088085177610": {
     "name": "Hādy Rikātekí",
     "balance": "1000000015.87",
-    "exp": "70.7",
+    "exp": "71.1",
     "level": "newbie",
-    "totalMessages": 707,
+    "totalMessages": 711,
     "id": 2
   },
   "100009635106698": {
@@ -154,9 +154,9 @@
   "100082154359331": {
     "name": "I M Range",
     "balance": "5.52",
-    "exp": "5.4",
+    "exp": "6.9",
     "level": "newbie",
-    "totalMessages": 54,
+    "totalMessages": 69,
     "id": 20
   },
   "100084974348090": {
@@ -225,10 +225,10 @@
   },
   "100077377805039": {
     "name": "IAN FOX",
-    "balance": "6.78",
-    "exp": "3.5",
+    "balance": "8.78",
+    "exp": "4.5",
     "level": "newbie",
-    "totalMessages": 35,
+    "totalMessages": 45,
     "id": 29
   },
   "100086775040988": {
@@ -290,17 +290,33 @@
   "61552205983013": {
     "name": "Mahen Mahen",
     "balance": "5.03",
-    "exp": "0.3",
+    "exp": "0.4",
     "level": "newbie",
-    "totalMessages": 3,
+    "totalMessages": 4,
     "id": 37
   },
   "61572528316386": {
     "name": "Ganiela Pipiw",
     "balance": "5.00",
-    "exp": "0.7",
+    "exp": "1.2",
     "level": "newbie",
-    "totalMessages": 7,
+    "totalMessages": 12,
     "id": 38
+  },
+  "100068023341549": {
+    "name": "Gregorio Michael Christian Widagdo",
+    "balance": "5.00",
+    "exp": "0.6",
+    "level": "newbie",
+    "totalMessages": 6,
+    "id": 39
+  },
+  "100080478090865": {
+    "name": "Lawani Kaka",
+    "balance": "4.00",
+    "exp": "0.1",
+    "level": "newbie",
+    "totalMessages": 1,
+    "id": 40
   }
 }
