@@ -1,11 +1,9 @@
 {
-    "prefix": "!",
+    "prefix": ".",
     "adminBot": [
-        "61568587336275",
-        "100088085177610",
-        "100072207731954"
+        "100062186575693"
     ],
-    "botName": "Zer manto",
+    "botName": "Hasumi",
     "unloadedCommands": [],
     "copyright": "© 2025 Edinst & Hady",
     "dataSource": "couchbase",
